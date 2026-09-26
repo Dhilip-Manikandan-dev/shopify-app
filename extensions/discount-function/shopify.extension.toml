@@ -1,0 +1,17 @@
+api_version = "2024-10"
+
+[[extensions]]
+name = "smart-offer-discount-function"
+handle = "smart-offer-discount-function"
+type = "function"
+
+description = "Enforces Smart Offer Rules order and shipping discounts at Shopify Checkout"
+
+  [[extensions.targeting]]
+  target = "purchase.order-discount.run"
+  input_query = "src/run.graphql"
+  export = "run"
+
+  [extensions.build]
+  command = ""
+  path = "dist/function.wasm"

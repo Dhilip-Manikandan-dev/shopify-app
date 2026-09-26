@@ -1,0 +1,218 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Store {
+  id              String           @id @default(cuid())
+  shop            String           @unique
+  name            String?
+  currency        String           @default("INR")
+  country         String           @default("IN")
+  timezone        String           @default("Asia/Kolkata")
+  domesticCountry String           @default("IN")
+  isActive        Boolean          @default(true)
+  installedAt     DateTime         @default(now())
+  uninstalledAt   DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  credential      ShopifyCredential?
+  rules           Rule[]
+  executionLogs   ExecutionLog[]
+  analyticsEvents AnalyticsEvent[]
+  subscription    Subscription?
+
+  @@index([shop])
+}
+
+model ShopifyCredential {
+  id                    String    @id @default(cuid())
+  storeId               String    @unique
+  store                 Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shop                  String
+  accessTokenEncrypted  String
+  accessTokenExpiresAt  DateTime?
+  refreshTokenEncrypted String?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  reauthRequired        Boolean   @default(false)
+  refreshLockUntil      DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([shop])
+}
+
+enum RuleStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+model Rule {
+  id              String           @id @default(cuid())
+  storeId         String
+  store           Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  status          RuleStatus       @default(DRAFT)
+  priority        Int              @default(10) // 1 = highest
+  startAt         DateTime?
+  endAt           DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  groups          RuleGroup[]
+  actions         Action[]
+  upsells         Upsell[]
+  display         RuleDisplay?
+  executionLogs   ExecutionLog[]
+  analyticsEvents AnalyticsEvent[]
+
+  @@index([storeId, status, priority])
+}
+
+model RuleGroup {
+  id         String      @id @default(cuid())
+  ruleId     String
+  rule       Rule        @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  position   Int         @default(0)
+  conditions Condition[]
+
+  @@index([ruleId, position])
+}
+
+model Condition {
+  id          String    @id @default(cuid())
+  ruleGroupId String
+  ruleGroup   RuleGroup @relation(fields: [ruleGroupId], references: [id], onDelete: Cascade)
+  field       String    // e.g., "cart.subtotal", "customer.tags", "location.country"
+  operator    String    // e.g., "equals", "gte", "contains", "in"
+  value       String    // JSON string or scalar string
+  valueType   String    @default("string") // "string", "number", "boolean", "array"
+  position    Int       @default(0)
+
+  @@index([ruleGroupId, position])
+}
+
+enum ActionType {
+  SHIPPING
+  DISCOUNT
+  UPSELL
+}
+
+model Action {
+  id            String     @id @default(cuid())
+  ruleId        String
+  rule          Rule       @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  type          ActionType
+  configuration Json       // Structured Action config
+  position      Int        @default(0)
+
+  @@index([ruleId, position])
+}
+
+model Upsell {
+  id              String   @id @default(cuid())
+  ruleId          String
+  rule            Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  productId       String   // Shopify GID or ID
+  variantId       String?  // Shopify Variant GID or ID
+  title           String
+  description     String?
+  imageUrl        String?
+  originalPrice   Decimal  @db.Decimal(10, 2)
+  offerPrice      Decimal  @db.Decimal(10, 2)
+  discountType    String   @default("PERCENTAGE") // PERCENTAGE, FIXED, FREE
+  discountValue   Decimal  @default(0) @db.Decimal(10, 2)
+  buttonText      String   @default("Add to Cart")
+  maxProducts     Int      @default(1)
+  enabled         Boolean  @default(true)
+  displayOrder    Int      @default(0)
+  excludeIfInCart Boolean  @default(true)
+
+  @@index([ruleId, enabled])
+}
+
+model RuleDisplay {
+  id             String  @id @default(cuid())
+  ruleId         String  @unique
+  rule           Rule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  productPage    Boolean @default(true)
+  collectionPage Boolean @default(true)
+  cartPage       Boolean @default(true)
+}
+
+model ExecutionLog {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  ruleId      String?
+  rule        Rule?    @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  contextHash String
+  matched     Boolean
+  surface     String?
+  diagnostics Json?    // Sanitized diagnostics, ZERO customer PII
+  createdAt   DateTime @default(now())
+
+  @@index([storeId, createdAt])
+}
+
+enum AnalyticsEventType {
+  RULE_TRIGGERED
+  UPSELL_VIEWED
+  UPSELL_CLICKED
+  UPSELL_ADDED
+}
+
+model AnalyticsEvent {
+  id             String             @id @default(cuid())
+  storeId        String
+  store          Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  ruleId         String?
+  rule           Rule?              @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  eventType      AnalyticsEventType
+  productId      String?
+  variantId      String?
+  surface        String?
+  sessionId      String?
+  idempotencyKey String?            @unique
+  metadata       Json?
+  createdAt      DateTime           @default(now())
+
+  @@index([storeId, eventType, createdAt])
+}
+
+enum PlanTier {
+  FREE
+  STARTER
+  GROWTH
+}
+
+model Subscription {
+  id               String   @id @default(cuid())
+  storeId          String   @unique
+  store            Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  plan             PlanTier @default(FREE)
+  status           String   @default("ACTIVE")
+  shopifyChargeId  String?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model ProcessedWebhook {
+  id          String   @id @default(cuid())
+  webhookId   String   @unique
+  topic       String
+  shop        String
+  processedAt DateTime @default(now())
+
+  @@index([webhookId])
+}
