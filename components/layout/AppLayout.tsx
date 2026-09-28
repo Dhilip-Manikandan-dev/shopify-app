@@ -1,13 +1,6 @@
 import React from "react";
 import { useRouter } from "next/router";
-import { Frame, Navigation } from "@shopify/polaris";
-import {
-  HomeIcon,
-  OrderIcon,
-  ChartLineIcon,
-  SettingsIcon,
-  PaymentIcon,
-} from "@shopify/polaris-icons";
+import { Frame } from "@shopify/polaris";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -15,58 +8,35 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
-  const currentPath = router.pathname;
   const shop = router.query.shop ? String(router.query.shop) : "";
+  const host = router.query.host ? String(router.query.host) : "";
 
-  const navigateTo = (path: string) => {
-    const url = shop ? `${path}?shop=${encodeURIComponent(shop)}` : path;
-    router.push(url);
+  const withParams = (path: string) => {
+    const params = new URLSearchParams();
+    if (shop) params.append("shop", shop);
+    if (host) params.append("host", host);
+    const qs = params.toString();
+    return qs ? `${path}?${qs}` : path;
   };
 
-  const navigationMarkup = (
-    <Navigation location={currentPath}>
-      <Navigation.Section
-        items={[
-          {
-            label: "Home",
-            icon: HomeIcon,
-            selected: currentPath === "/app",
-            onClick: () => navigateTo("/app"),
-          },
-          {
-            label: "Rules",
-            icon: OrderIcon,
-            selected: currentPath.startsWith("/app/rules"),
-            onClick: () => navigateTo("/app/rules"),
-          },
-          {
-            label: "Analytics",
-            icon: ChartLineIcon,
-            selected: currentPath === "/app/analytics",
-            onClick: () => navigateTo("/app/analytics"),
-          },
-          {
-            label: "Settings",
-            icon: SettingsIcon,
-            selected: currentPath === "/app/settings",
-            onClick: () => navigateTo("/app/settings"),
-          },
-          {
-            label: "Billing",
-            icon: PaymentIcon,
-            selected: currentPath === "/app/billing",
-            onClick: () => navigateTo("/app/billing"),
-          },
-        ]}
-      />
-    </Navigation>
-  );
-
   return (
-    <div className="min-h-screen bg-[#f6f6f7]">
-      <Frame navigation={navigationMarkup}>
-        <div className="pb-16">{children}</div>
-      </Frame>
-    </div>
+    <>
+      {/* Shopify App Bridge Navigation: Moves navigation directly under 'Apps > smart discount' in Shopify Admin sidebar */}
+      <ui-nav-menu>
+        <a href="/app" rel="home">
+          Home
+        </a>
+        <a href="/app/rules">Rules</a>
+        <a href="/app/analytics">Analytics</a>
+        <a href="/app/settings">Settings</a>
+        <a href="/app/billing">Billing</a>
+      </ui-nav-menu>
+
+      <div className="min-h-screen bg-[#f6f6f7]">
+        <Frame>
+          <div className="pb-16">{children}</div>
+        </Frame>
+      </div>
+    </>
   );
 }

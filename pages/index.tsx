@@ -1,15 +1,24 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
+import { GetServerSideProps } from "next";
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const query = new URLSearchParams(context.query as Record<string, string>).toString();
+  return {
+    redirect: {
+      destination: `/app${query ? `?${query}` : ""}`,
+      permanent: false,
+    },
+  };
+};
 
 export default function IndexPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (router.isReady) {
-      const q = router.asPath.includes("?")
-        ? router.asPath.substring(router.asPath.indexOf("?"))
-        : "";
-      router.replace(`/app${q}`);
+    if (typeof window !== "undefined") {
+      const search = window.location.search;
+      router.replace(`/app${search}`);
     }
   }, [router]);
 

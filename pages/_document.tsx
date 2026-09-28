@@ -4,6 +4,15 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        <meta
+          name="shopify-api-key"
+          content={
+            process.env.NEXT_PUBLIC_SHOPIFY_API_KEY ||
+            process.env.SHOPIFY_API_KEY ||
+            "7e85134af63924377475a90a3d0924cd"
+          }
+        />
+        <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
