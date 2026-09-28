@@ -1,0 +1,22 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "7e85134af63924377475a90a3d0924cd"
+name = "smart-offer-rules"
+handle = "smart-offer-rules"
+application_url = "https://g3nc0gnw-3000.inc1.devtunnels.ms"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = false
+dev_store_url = "smart-discoun.myshopify.com"
+
+[access_scopes]
+scopes = "read_products,write_products,read_customers,read_orders,read_discounts,write_discounts"
+
+[auth]
+redirect_urls = [
+  "https://g3nc0gnw-3000.inc1.devtunnels.ms/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2025-01"

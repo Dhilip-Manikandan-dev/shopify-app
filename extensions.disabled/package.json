@@ -1,0 +1,11 @@
+{
+  "name": "smart-offer-discount-function",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@shopify/shopify_function": "~2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}
