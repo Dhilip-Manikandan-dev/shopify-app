@@ -1,6 +1,6 @@
 import React from "react";
 import { useRouter } from "next/router";
-import { Frame, Navigation, TopBar } from "@shopify/polaris";
+import { Frame, Navigation } from "@shopify/polaris";
 import {
   HomeIcon,
   OrderIcon,
@@ -62,27 +62,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     </Navigation>
   );
 
-  const [userMenuOpen, setUserMenuOpen] = React.useState(false);
-
-  const topBarMarkup = (
-    <TopBar
-      showNavigationToggle
-      userMenu={
-        <TopBar.UserMenu
-          actions={[]}
-          name="Smart Offer Rules"
-          initials="SR"
-          open={userMenuOpen}
-          onToggle={() => setUserMenuOpen((open) => !open)}
-          detail={shop || "Store Connected"}
-        />
-      }
-    />
-  );
-
   return (
     <div className="min-h-screen bg-[#f6f6f7]">
-      <Frame topBar={topBarMarkup} navigation={navigationMarkup}>
+      <Frame navigation={navigationMarkup}>
         <div className="pb-16">{children}</div>
       </Frame>
     </div>
