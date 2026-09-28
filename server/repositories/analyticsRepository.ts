@@ -83,7 +83,7 @@ export class AnalyticsRepository {
   /**
    * Rule-by-rule conversion performance table
    */
-  static async getRulePerformance(storeId: string) {
+  static async getRulePerformance(storeId: string, startDate?: Date) {
     const rules = await prisma.rule.findMany({
       where: { storeId },
       select: {
@@ -95,14 +95,25 @@ export class AnalyticsRepository {
       orderBy: { priority: "asc" },
     });
 
+    const whereBase = {
+      storeId,
+      ...(startDate ? { createdAt: { gte: startDate } } : {}),
+    };
+
     const ruleStats = await Promise.all(
       rules.map(async (rule) => {
-        const [viewed, added] = await Promise.all([
+        const [triggered, viewed, clicked, added] = await Promise.all([
           prisma.analyticsEvent.count({
-            where: { storeId, ruleId: rule.id, eventType: "UPSELL_VIEWED" },
+            where: { ...whereBase, ruleId: rule.id, eventType: "RULE_TRIGGERED" },
           }),
           prisma.analyticsEvent.count({
-            where: { storeId, ruleId: rule.id, eventType: "UPSELL_ADDED" },
+            where: { ...whereBase, ruleId: rule.id, eventType: "UPSELL_VIEWED" },
+          }),
+          prisma.analyticsEvent.count({
+            where: { ...whereBase, ruleId: rule.id, eventType: "UPSELL_CLICKED" },
+          }),
+          prisma.analyticsEvent.count({
+            where: { ...whereBase, ruleId: rule.id, eventType: "UPSELL_ADDED" },
           }),
         ]);
 
@@ -110,11 +121,19 @@ export class AnalyticsRepository {
 
         return {
           id: rule.id,
+          ruleId: rule.id,
           name: rule.name,
+          ruleName: rule.name,
           status: rule.status,
           priority: rule.priority,
           views: viewed,
           added,
+          events: {
+            RULE_TRIGGERED: triggered,
+            UPSELL_VIEWED: viewed,
+            UPSELL_CLICKED: clicked,
+            UPSELL_ADDED: added,
+          },
           conversionRate,
         };
       })

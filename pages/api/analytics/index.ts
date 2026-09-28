@@ -15,7 +15,8 @@ async function handler(
     });
   }
 
-  const metrics = await AnalyticsService.getDashboardMetrics(req.store.id);
+  const days = req.query.days ? parseInt(String(req.query.days), 10) : 30;
+  const metrics = await AnalyticsService.getDashboardMetrics(req.store.id, days);
   return res.status(200).json({
     success: true,
     data: metrics,

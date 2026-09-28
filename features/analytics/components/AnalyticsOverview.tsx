@@ -57,13 +57,15 @@ export function AnalyticsOverview({ shop }: AnalyticsOverviewProps) {
     );
   }
 
-  const triggered = data.eventsSummary.RULE_TRIGGERED || 0;
-  const viewed = data.eventsSummary.UPSELL_VIEWED || 0;
-  const clicked = data.eventsSummary.UPSELL_CLICKED || 0;
-  const added = data.eventsSummary.UPSELL_ADDED || 0;
+  const eventsSummary = data?.eventsSummary || {};
+  const triggered = eventsSummary.RULE_TRIGGERED || 0;
+  const viewed = eventsSummary.UPSELL_VIEWED || 0;
+  const clicked = eventsSummary.UPSELL_CLICKED || 0;
+  const added = eventsSummary.UPSELL_ADDED || 0;
 
   const clickRate = viewed > 0 ? ((clicked / viewed) * 100).toFixed(1) : "0.0";
   const conversionRate = viewed > 0 ? ((added / viewed) * 100).toFixed(1) : "0.0";
+  const rulePerformance = data?.rulePerformance || [];
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -224,14 +226,14 @@ export function AnalyticsOverview({ shop }: AnalyticsOverviewProps) {
             Rule-by-Rule Breakdown
           </Text>
         </div>
-        {data.rulePerformance.length === 0 ? (
+        {rulePerformance.length === 0 ? (
           <div className="p-8 text-center text-gray-500 text-sm">
             No storefront interactions recorded for active rules yet.
           </div>
         ) : (
           <IndexTable
             resourceName={{ singular: "rule", plural: "rules" }}
-            itemCount={data.rulePerformance.length}
+            itemCount={rulePerformance.length}
             headings={[
               { title: "Rule" },
               { title: "Triggered" },
@@ -241,20 +243,23 @@ export function AnalyticsOverview({ shop }: AnalyticsOverviewProps) {
             ]}
             selectable={false}
           >
-            {data.rulePerformance.map((item, idx) => {
-              const ruleTriggered = item.events.RULE_TRIGGERED || 0;
-              const ruleViewed = item.events.UPSELL_VIEWED || 0;
-              const ruleAdded = item.events.UPSELL_ADDED || 0;
+            {rulePerformance.map((item, idx) => {
+              const ruleTriggered = item.events?.RULE_TRIGGERED || 0;
+              const ruleViewed = item.events?.UPSELL_VIEWED || 0;
+              const ruleAdded = item.events?.UPSELL_ADDED || 0;
               const rate =
                 ruleViewed > 0
                   ? `${((ruleAdded / ruleViewed) * 100).toFixed(1)}%`
                   : "0.0%";
 
+              const rId = item.ruleId || (item as any).id || String(idx);
+              const rName = item.ruleName || (item as any).name || "Rule";
+
               return (
-                <IndexTable.Row id={item.ruleId} key={item.ruleId} position={idx}>
+                <IndexTable.Row id={rId} key={rId} position={idx}>
                   <IndexTable.Cell>
                     <span className="font-semibold text-gray-900">
-                      {item.ruleName}
+                      {rName}
                     </span>
                   </IndexTable.Cell>
                   <IndexTable.Cell>{ruleTriggered.toLocaleString()}</IndexTable.Cell>

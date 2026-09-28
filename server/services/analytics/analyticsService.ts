@@ -1,3 +1,4 @@
+import prisma from "@/lib/prisma";
 import { AnalyticsRepository, RecordEventInput } from "@/server/repositories/analyticsRepository";
 import { StoreRepository } from "@/server/repositories/storeRepository";
 
@@ -31,15 +32,61 @@ export class AnalyticsService {
     return AnalyticsRepository.recordEvent(data);
   }
 
-  static async getDashboardMetrics(storeId: string) {
-    const [overview, rules] = await Promise.all([
-      AnalyticsRepository.getStoreMetrics(storeId),
-      AnalyticsRepository.getRulePerformance(storeId),
+  static async getDashboardMetrics(storeId: string, days = 30) {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const [
+      activeRulesCount,
+      totalRulesCount,
+      metrics,
+      rulePerformance,
+      executionLogsCount,
+      surfaceEvents,
+    ] = await Promise.all([
+      prisma.rule.count({
+        where: { storeId, status: "ACTIVE" },
+      }),
+      prisma.rule.count({
+        where: { storeId },
+      }),
+      AnalyticsRepository.getStoreMetrics(storeId, startDate),
+      AnalyticsRepository.getRulePerformance(storeId, startDate),
+      prisma.executionLog.count({
+        where: { storeId, createdAt: { gte: startDate } },
+      }),
+      prisma.analyticsEvent.groupBy({
+        by: ["surface"],
+        where: { storeId, createdAt: { gte: startDate } },
+        _count: { _all: true },
+      }),
     ]);
 
+    const eventsBySurface: Record<string, number> = {};
+    for (const item of surfaceEvents) {
+      if (item.surface) {
+        eventsBySurface[item.surface] = item._count._all;
+      }
+    }
+
+    const eventsSummary = {
+      RULE_TRIGGERED: metrics.triggered,
+      UPSELL_VIEWED: metrics.viewed,
+      UPSELL_CLICKED: metrics.clicked,
+      UPSELL_ADDED: metrics.added,
+    };
+
     return {
-      overview,
-      rules,
+      timeframe: `Last ${days} days`,
+      activeRulesCount,
+      totalRulesCount,
+      eventsSummary,
+      eventsBySurface,
+      rulePerformance,
+      executionLogsCount,
+      // For backwards compatibility:
+      overview: metrics,
+      rules: rulePerformance,
     };
   }
 }
